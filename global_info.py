@@ -36,6 +36,12 @@ class GlobalInfo:
     # 红点显示独立开关（与 mode 解耦）：勾选就显示红点，无论当前处于 silent_train / move_cursor
     show_red_dot_enabled = False
 
+    # ================== 摄像头配置 ==================
+    # 摄像头设备索引（cv2.VideoCapture 的参数）。
+    # 多摄像头设备（如 MacBook 内置 + 外接 USB/Continuity Camera）时可通过 GUI 切换，
+    # 退出时持久化到 user_config.json，下次启动直接生效。
+    camera_index = 0
+
     # ================== 新增鼠标交互模式配置 ==================
     # —— 模式 gaze_jump：手动移动鼠标时，若光标距视线过远则一次性瞬移到视线位置 ——
     # 触发条件：用户正在手动移动鼠标，且当前光标位置与视线预测点距离 > jump_threshold

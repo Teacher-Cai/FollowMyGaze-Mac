@@ -257,6 +257,23 @@ class GazeApp:
                        command=self._on_auto_train_toggle
                        ).grid(row=0, column=1, padx=8)
 
+        # 摄像头选择（多摄像头设备可切换；切换后立即重连生效）
+        tk.Label(frame, text="摄像头：").grid(row=0, column=2, padx=(20, 2))
+        self.camera_index_var = tk.StringVar(
+            value=str(int(getattr(GlobalInfo, 'camera_index', 0))))
+        self.camera_combo = ttk.Combobox(
+            frame, width=4, state='normal',
+            values=[str(i) for i in range(6)],  # 0~5，也可手动输入更大索引
+            textvariable=self.camera_index_var)
+        self.camera_combo.grid(row=0, column=3)
+        # 下拉选中 / 回车确认 均触发切换
+        self.camera_combo.bind('<<ComboboxSelected>>', self._on_camera_index_changed)
+        self.camera_combo.bind('<Return>', self._on_camera_index_changed)
+        self.camera_hint = tk.Label(
+            frame, text=f"当前：{int(getattr(GlobalInfo, 'camera_index', 0))}",
+            fg="green", width=8, anchor='w')
+        self.camera_hint.grid(row=0, column=4, padx=(4, 0))
+
         # ─── 视线跳转 ───
         jump_frame = tk.LabelFrame(self.root, text="视线跳转", padx=6, pady=4)
         jump_frame.pack(fill='x', padx=8, pady=(0, 6))
@@ -399,6 +416,20 @@ class GazeApp:
                 self._on_auto_train_toggle()
         except Exception:
             logger.exception("restore auto_train failed")
+        try:
+            if "camera_index" in cfg:
+                idx = int(cfg["camera_index"])
+                # main.py 启动时已用该值打开摄像头，这里只同步 UI 显示；
+                # 若摄像头尚未就绪（例如启动时设备被占用），则触发一次重连
+                self.camera_index_var.set(str(idx))
+                if idx != GlobalInfo.camera_index or \
+                        GlobalInfo.video_steam is None or \
+                        not GlobalInfo.video_steam.isOpened():
+                    self._on_camera_index_changed()
+                else:
+                    self.camera_hint.config(text=f"当前：{idx}", fg="green")
+        except Exception:
+            logger.exception("restore camera_index failed")
         try:
             if "jump_threshold" in cfg:
                 self.jump_threshold_var.set(str(int(cfg["jump_threshold"])))
@@ -560,6 +591,31 @@ class GazeApp:
         self.model_state_str.set(
             "自动训练已开启" if GlobalInfo.enable_auto_train else "自动训练已关闭")
 
+    def _on_camera_index_changed(self, *_):
+        """摄像头选择变化 → 立即重连对应设备。
+
+        - 合法非负整数：写入 GlobalInfo.camera_index 并调用 _reinit_camera 热切换
+        - 非法输入：不动 GlobalInfo，hint 变灰提示
+        重连结果（成功/失败）由 _reinit_camera 通过 model_state_str 反馈。
+        """
+        raw = self.camera_index_var.get().strip()
+        try:
+            idx = int(raw)
+            if idx < 0:
+                raise ValueError("must be >= 0")
+        except (TypeError, ValueError):
+            self.camera_hint.config(
+                text=f"无效，仍用：{int(GlobalInfo.camera_index)}", fg="gray")
+            return
+        if idx == GlobalInfo.camera_index and \
+                GlobalInfo.video_steam is not None and GlobalInfo.video_steam.isOpened():
+            self.camera_hint.config(text=f"当前：{idx}", fg="green")
+            return
+        GlobalInfo.camera_index = idx
+        self.camera_hint.config(text=f"当前：{idx}", fg="green")
+        self.model_state_str.set(f"正在切换摄像头{idx}…")
+        self._reinit_camera()
+
     def _on_jump_threshold_changed(self, value=None):
         """输入框内容变化即生效：
         - 合法正整数 → 立即写入 GlobalInfo，hint 显示绿色"已生效"
@@ -642,20 +698,21 @@ class GazeApp:
     # ================== 摄像头帧循环 ==================
     def _reinit_camera(self):
         self._camera_fail_count = 0
+        cam_idx = int(getattr(GlobalInfo, 'camera_index', 0))
         try:
             if GlobalInfo.video_steam is not None:
                 GlobalInfo.video_steam.release()
         except Exception:
             logger.exception("release camera failed")
         try:
-            GlobalInfo.video_steam = cv2.VideoCapture(0)
+            GlobalInfo.video_steam = cv2.VideoCapture(cam_idx)
             if GlobalInfo.video_steam.isOpened():
                 GlobalInfo.video_steam.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                logger.info("camera reinitialized successfully")
-                self.model_state_str.set("摄像头已恢复")
+                logger.info("camera %d reinitialized successfully", cam_idx)
+                self.model_state_str.set(f"摄像头{cam_idx}已连接")
             else:
-                logger.warning("camera reinit failed, will retry")
-                self.model_state_str.set("摄像头连接中...")
+                logger.warning("camera %d reinit failed, will retry", cam_idx)
+                self.model_state_str.set(f"摄像头{cam_idx}连接中...")
         except Exception:
             logger.exception("camera reinit exception")
             self.model_state_str.set("摄像头异常")
@@ -719,6 +776,7 @@ class GazeApp:
         try:
             save_gui_config(
                 auto_train=bool(self.auto_train_var.get()),
+                camera_index=int(GlobalInfo.camera_index),
                 jump_threshold=int(GlobalInfo.gaze_jump_jump_threshold),
                 glide_multiplier=float(GlobalInfo.gaze_glide_max_multiplier),
                 # 进阶参数
