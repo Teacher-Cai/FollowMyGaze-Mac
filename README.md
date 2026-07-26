@@ -771,7 +771,12 @@ FollowMyGaze/
 ├── utils.py                        # 图像缩放、点击监听、Alt 光标随动、资源路径等工具
 ├── convert_icon.py                 # 把图片转换为 PNG/ICNS/ICO 图标
 ├── face_landmarker.task            # MediaPipe FaceLandmarker 模型资源
-├── main.spec                       # PyInstaller 打包配置（含 icon.icns）
+├── asset/                          # 图片资源目录
+│   ├── aaa.jpg                     # 图标源图片
+│   ├── icon.png                    # Tkinter 窗口图标
+│   ├── icon.icns                   # macOS 应用图标
+│   └── icon.ico                    # Windows 可执行文件图标
+├── main.spec                       # PyInstaller 打包配置（含 asset/icon.icns）
 ├── cnn_model.py                    # 早期 CNN 模型实验代码
 ├── data_process.py                 # 早期图像数据处理代码
 ├── train_and_predict.py            # 早期 CNN 训练/推理代码
@@ -836,19 +841,19 @@ pyautogui.PAUSE = 0
 
 ### 生成应用图标（可选）
 
-准备一张图片（如 `aaa.jpg`），运行脚本一键生成三种格式的图标：
+准备一张图片（如 `asset/aaa.jpg`），运行脚本一键生成三种格式的图标：
 
 ```bash
 python convert_icon.py
 ```
 
-产出：
+产出（均在 `asset/` 目录下）：
 
-- `icon.png`：Tkinter 运行时窗口图标（`gui.py` 启动时自动加载）
-- `icon.icns`：macOS 应用图标（`.icns` 只能在 macOS 上通过 `iconutil` 生成）
-- `icon.ico`：Windows 可执行文件图标
+- `asset/icon.png`：Tkinter 运行时窗口图标（`gui.py` 启动时自动加载）
+- `asset/icon.icns`：macOS 应用图标（`.icns` 只能在 macOS 上通过 `iconutil` 生成）
+- `asset/icon.ico`：Windows 可执行文件图标
 
-如需更换源图片，修改 `convert_icon.py` 顶部的 `src = "aaa.jpg"`。
+如需更换源图片，修改 `convert_icon.py` 底部的 `src = "asset/aaa.jpg"`。
 
 ### PyInstaller 打包
 
@@ -860,8 +865,8 @@ pyinstaller main.spec
 
 注意事项：
 
-- 打包时需要确保 `face_landmarker.task` 与 `icon.png` 被包含到最终产物中（已在 `main.spec` 的 `datas` 中声明）。
-- macOS 应用图标由 `main.spec` 中 `BUNDLE(..., icon='icon.icns')` 指定；Windows 可在 `EXE(..., icon='icon.ico')` 指定。
+- 打包时需要确保 `face_landmarker.task` 与 `asset/icon.png` 被包含到最终产物中（已在 `main.spec` 的 `datas` 中声明）。
+- macOS 应用图标由 `main.spec` 中 `BUNDLE(..., icon='asset/icon.icns')` 指定；Windows 可在 `EXE(..., icon='asset/icon.ico')` 指定。
 - `utils.resource_path()` 已兼容 PyInstaller 的 `_MEIPASS` 路径。
 
 ---

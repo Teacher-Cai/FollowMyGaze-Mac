@@ -1,9 +1,9 @@
-"""将 aaa.jpg 转为各平台所需的图标格式。
+"""将 asset/aaa.jpg 转为各平台所需的图标格式。
 用法：python convert_icon.py
-产出：
-  - icon.png   Tkinter 窗口图标
-  - icon.icns  macOS 应用图标 (需要 sips/iconutil)
-  - icon.ico   Windows 可执行文件图标
+产出（均在 asset/ 目录下）：
+  - asset/icon.png   Tkinter 窗口图标
+  - asset/icon.icns  macOS 应用图标 (需要 sips/iconutil)
+  - asset/icon.ico   Windows 可执行文件图标
 """
 import subprocess
 import sys
@@ -25,7 +25,7 @@ def png_to_icns_macos(src_png: str, dst_icns: str) -> None:
         print("[跳过] .icns 只能在 macOS 上生成")
         return
 
-    tmp_dir = Path("icon.iconset")
+    tmp_dir = Path("asset/icon.iconset")
     tmp_dir.mkdir(exist_ok=True)
 
     sizes = {
@@ -65,18 +65,18 @@ def png_to_ico(src_png: str, dst_ico: str) -> None:
 
 
 if __name__ == "__main__":
-    src = "aaa.jpg"
+    src = "asset/aaa.jpg"
     if not Path(src).exists():
         print(f"[错误] 找不到 {src}")
         sys.exit(1)
 
     # 1. PNG (Tkinter runtime)
-    convert_jpg_to_png(src, "icon.png", size=(256, 256))
+    convert_jpg_to_png(src, "asset/icon.png", size=(256, 256))
 
     # 2. ICNS (macOS app bundle)
-    png_to_icns_macos("icon.png", "icon.icns")
+    png_to_icns_macos("asset/icon.png", "asset/icon.icns")
 
     # 3. ICO (Windows exe)
-    png_to_ico("icon.png", "icon.ico")
+    png_to_ico("asset/icon.png", "asset/icon.ico")
 
     print("\n完成！各平台图标文件已生成。")

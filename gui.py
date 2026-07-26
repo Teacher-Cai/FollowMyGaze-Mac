@@ -153,7 +153,7 @@ class GazeApp:
         # —— 设置窗口图标 ——
         try:
             from utils import resource_path
-            icon_img = ImageTk.PhotoImage(Image.open(resource_path("icon.png")))
+            icon_img = ImageTk.PhotoImage(Image.open(resource_path("asset/icon.png")))
             self.root.iconphoto(True, icon_img)
         except Exception:
             pass
